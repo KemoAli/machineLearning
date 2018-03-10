@@ -207,6 +207,16 @@ def nnObjFunction(params, *args):
     zj_hidden1 = np.column_stack((zj_hidden1,np.ones(zj_hidden1.shape[0])))
     #Multiplying and making the function non linear
     outputs = sigmoid(np.dot(zj_hidden1, w2.T))
+
+
+    #1 to k encoding
+    new_training_label = np.empty((0,10), int)
+
+    for i in training_label:
+        temp = np.array([[0,0,0,0,0,0,0,0,0,0]]);
+        temp[0][i[0] - 1] = 1
+        new_training_label = np.append(new_training_label,temp, axis=0)
+
     
 
 
