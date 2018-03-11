@@ -93,6 +93,7 @@ def preprocess():
     # remove features that have same value for all points in the training data
     #train_data = np.unique(train_data, axis=0)
 
+
     col_to_remove = np.all(train_data == train_data[0, :], axis=0)
     index_to_remove = []
 
@@ -105,9 +106,11 @@ def preprocess():
 
     # convert data to double
     train_data = train_data.astype(float)
+    test_data = test_data.astype(float)
 
     # normalize data to [0,1]
     train_data = train_data / 255
+    test_data = test_data / 255
 
 
     # Split train_data and train_label into train_data, validation_data and train_label, validation_label
@@ -333,7 +336,7 @@ initial_w2 = initializeWeights(n_hidden, n_class)
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()), 0)
 
 # set the regularization hyper-parameter
-lambdaval = 0.4
+lambdaval = 0.1
 
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
