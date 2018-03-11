@@ -1,9 +1,8 @@
 import numpy as np
+import random
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
-from random import randint
-import matplotlib.pyplot as plt
 
 
 def initializeWeights(n_in, n_out):
@@ -63,26 +62,26 @@ def preprocess():
                                  mat['train4'], mat['train5'],
                                  mat['train6'], mat['train7'],
                                  mat['train8'], mat['train9']), 0)
-    train_label = np.concatenate((np.ones((mat['train0'].shape[0], 1), dtype='uint8'),
-                                  2 * np.ones((mat['train1'].shape[0], 1), dtype='uint8'),
-                                  3 * np.ones((mat['train2'].shape[0], 1), dtype='uint8'),
-                                  4 * np.ones((mat['train3'].shape[0], 1), dtype='uint8'),
-                                  5 * np.ones((mat['train4'].shape[0], 1), dtype='uint8'),
-                                  6 * np.ones((mat['train5'].shape[0], 1), dtype='uint8'),
-                                  7 * np.ones((mat['train6'].shape[0], 1), dtype='uint8'),
-                                  8 * np.ones((mat['train7'].shape[0], 1), dtype='uint8'),
-                                  9 * np.ones((mat['train8'].shape[0], 1), dtype='uint8'),
-                                  10 * np.ones((mat['train9'].shape[0], 1), dtype='uint8')), 0)
-    test_label = np.concatenate((np.ones((mat['test0'].shape[0], 1), dtype='uint8'),
-                                 2 * np.ones((mat['test1'].shape[0], 1), dtype='uint8'),
-                                 3 * np.ones((mat['test2'].shape[0], 1), dtype='uint8'),
-                                 4 * np.ones((mat['test3'].shape[0], 1), dtype='uint8'),
-                                 5 * np.ones((mat['test4'].shape[0], 1), dtype='uint8'),
-                                 6 * np.ones((mat['test5'].shape[0], 1), dtype='uint8'),
-                                 7 * np.ones((mat['test6'].shape[0], 1), dtype='uint8'),
-                                 8 * np.ones((mat['test7'].shape[0], 1), dtype='uint8'),
-                                 9 * np.ones((mat['test8'].shape[0], 1), dtype='uint8'),
-                                 10 * np.ones((mat['test9'].shape[0], 1), dtype='uint8')), 0)
+    train_label = np.concatenate((0*np.ones((mat['train0'].shape[0], 1), dtype='uint8'),
+                                  1 * np.ones((mat['train1'].shape[0], 1), dtype='uint8'),
+                                  2 * np.ones((mat['train2'].shape[0], 1), dtype='uint8'),
+                                  3 * np.ones((mat['train3'].shape[0], 1), dtype='uint8'),
+                                  4 * np.ones((mat['train4'].shape[0], 1), dtype='uint8'),
+                                  5 * np.ones((mat['train5'].shape[0], 1), dtype='uint8'),
+                                  6 * np.ones((mat['train6'].shape[0], 1), dtype='uint8'),
+                                  7 * np.ones((mat['train7'].shape[0], 1), dtype='uint8'),
+                                  8 * np.ones((mat['train8'].shape[0], 1), dtype='uint8'),
+                                  9 * np.ones((mat['train9'].shape[0], 1), dtype='uint8')), 0)
+    test_label = np.concatenate((0* np.ones((mat['test0'].shape[0], 1), dtype='uint8'),
+                                 1 * np.ones((mat['test1'].shape[0], 1), dtype='uint8'),
+                                 2 * np.ones((mat['test2'].shape[0], 1), dtype='uint8'),
+                                 3 * np.ones((mat['test3'].shape[0], 1), dtype='uint8'),
+                                 4 * np.ones((mat['test4'].shape[0], 1), dtype='uint8'),
+                                 5 * np.ones((mat['test5'].shape[0], 1), dtype='uint8'),
+                                 6 * np.ones((mat['test6'].shape[0], 1), dtype='uint8'),
+                                 7 * np.ones((mat['test7'].shape[0], 1), dtype='uint8'),
+                                 8 * np.ones((mat['test8'].shape[0], 1), dtype='uint8'),
+                                 9 * np.ones((mat['test9'].shape[0], 1), dtype='uint8')), 0)
     test_data = np.concatenate((mat['test0'], mat['test1'],
                                 mat['test2'], mat['test3'],
                                 mat['test4'], mat['test5'],
@@ -90,19 +89,15 @@ def preprocess():
                                 mat['test8'], mat['test9']), 0)
 
 
+
+
+
     # remove features that have same value for all points in the training data
-    #train_data = np.unique(train_data, axis=0)
+    to_remove = np.all(train_data == train_data[0, :], axis=0)
+    train_data = train_data[:, ~to_remove]
+    test_data = test_data[:, ~to_remove]
 
 
-    col_to_remove = np.all(train_data == train_data[0, :], axis=0)
-    index_to_remove = []
-
-    for index in range(len(col_to_remove)):
-        if col_to_remove[index] == True:
-            index_to_remove.append(index)
-
-    train_data = np.delete(train_data, index_to_remove, axis=1)
-    test_data = np.delete(test_data, index_to_remove, axis=1)
 
     # convert data to double
     train_data = train_data.astype(float)
@@ -117,32 +112,17 @@ def preprocess():
     # replace the next two lines
 
     #creating a list of 10,000 indexes to remove from training data, and insert into validation data and validation label
-    to_validation= []
-    while len(to_validation) < 10000:
-        random = randint(0, 59999)
-
-        if random not in to_validation:
-            to_validation.append(random)
-
-
-    validation_data = np.array([])
-    temp_data = []
-    for index in to_validation:
-        temp_data.append(train_data[index])
-
-    validation_data = np.array(temp_data)
-
-    validation_label = np.array([])
-    temp_label = []
-    for index in to_validation:
-        temp_label.append(train_label[index])
-
-    validation_label = np.array(temp_label)
+    to_validation = random.sample(range(0, 60000), 10000)
+    validation_data = train_data[to_validation]
+    validation_label = train_label[to_validation]
 
 
     #removing validation images from training data
     train_data = np.delete(train_data, to_validation, axis=0)
     train_label = np.delete(train_label, to_validation, axis=0)
+
+
+
 
     print("preprocess done!")
 
@@ -216,19 +196,18 @@ def nnObjFunction(params, *args):
     new_training_label = np.zeros((len(training_data), 10))
 
 
+
     for i in range(len(new_training_label)):
 
         new_training_label[i][train_label[i][0] - 1] = 1
 
-
-    training_label = new_training_label
 
 
     # Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     # you would use code similar to the one below to create a flat array
     # obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
     # Back propogation
-    delta_l = outputs- training_label
+    delta_l = outputs - new_training_label
 
     grad_w2 = np.dot(delta_l.T, zj_hidden1)
     grad_w1 = np.dot(((1 - zj_hidden1) * zj_hidden1* (np.dot(delta_l, w2))).T, training_data)
@@ -244,7 +223,7 @@ def nnObjFunction(params, *args):
     obj_grad = obj_grad / num_samples
 
     # obj_val
-    obj_val_part1 = np.sum(-1 * (training_label * np.log(outputs) + (1 - training_label) * np.log(1 - outputs)))
+    obj_val_part1 = np.sum(-1 * (new_training_label * np.log(outputs) + (1 - new_training_label) * np.log(1 - outputs)))
     obj_val_part1 = obj_val_part1 / num_samples
     obj_val_part2 = (lambdaval / (2 * num_samples)) * (np.sum(np.square(w1)) + np.sum(np.square(w2)))
     obj_val = obj_val_part1 + obj_val_part2
@@ -270,43 +249,19 @@ def nnPredict(w1, w2, data):
     % Output:
     % label: a column vector of predicted labels"""
 
-    labels = np.array([])
-    # Your code here
+    # Add bias
+    data = np.column_stack((data, np.ones(data.shape[0])))
+    zj_array_n = sigmoid(np.dot(data, w1.T))
+    # Add bias
+    zj_array_n = np.column_stack((zj_array_n, np.ones(zj_array_n.shape[0])))
+    # Feed to output
+    ol_array_n = sigmoid(np.dot(zj_array_n, w2.T))
 
-    labels = np.zeros((data.shape[0], 1))
-    # Your code here
+    # Return indices of max as labels
+    labels = np.argmax(ol_array_n, axis=1) + 1
 
-    # Feed Forward Starts
-    data_bias_node = np.zeros(len(data))
-    data_bias_node.fill(1)
-    data = np.column_stack([data, data_bias_node])
-    # print data.shape
-    w1_t = np.transpose(w1)
-    # print w1.shape
-    aj = np.dot(data, w1_t)
-    # print aj.shape
-    zj = sigmoid(aj)
 
-    zj_bias_node = np.zeros(len(data))
-    zj_bias_node.fill(1)
-    zj = np.column_stack([zj, zj_bias_node])
-    # print zj.shape
-    w2_t = np.transpose(w2)
-    # print w2.shape
-    bl = np.dot(zj, w2_t)
-    # print bl.shape
-    ol = sigmoid(bl)
-
-    # Feed Forward Ends
-
-    # Label Prediction Start
-
-    for x in range(ol.shape[0]):
-        max_index = np.argmax(ol[x])
-        labels[x] = max_index
-        # print max_index
-
-    # Label Prediction End
+    labels = labels.reshape(-1, 1)
 
     return labels
 
@@ -323,7 +278,7 @@ train_data, train_label, validation_data, validation_label, test_data, test_labe
 n_input = train_data.shape[1]
 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 50
+n_hidden = 90
 
 # set the number of nodes in output unit
 n_class = 10
@@ -336,7 +291,7 @@ initial_w2 = initializeWeights(n_hidden, n_class)
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()), 0)
 
 # set the regularization hyper-parameter
-lambdaval = 0.1
+lambdaval = 0.6
 
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
@@ -358,6 +313,7 @@ w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 # Test the computed parameters
 
 predicted_label = nnPredict(w1, w2, train_data)
+
 
 # find the accuracy on Training Dataset
 
