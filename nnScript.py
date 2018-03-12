@@ -1,22 +1,19 @@
 import numpy as np
+import random
+import time
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
-from random import randint
-import matplotlib.pyplot as plt
-
 
 
 def initializeWeights(n_in, n_out):
     """
     # initializeWeights return the random weights for Neural Network given the
     # number of node in the input layer and output layer
-
     # Input:
     # n_in: number of nodes of the input layer
     # n_out: number of nodes of the output layer
-       
-    # Output: 
+    # Output:
     # W: matrix of random initial weights with size (n_out x (n_in + 1))"""
 
     epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
@@ -28,28 +25,26 @@ def sigmoid(z):
     """# Notice that z can be a scalar, a vector or a matrix
     # return the sigmoid of input z"""
 
-    return  # your code here
+    return  1/(1+np.exp(-z))
 
 
 def preprocess():
     """ Input:
      Although this function doesn't have any input, you are required to load
      the MNIST data set from file 'mnist_all.mat'.
-
      Output:
-     train_data: matrix of training set. Each row of train_data contains 
+     train_data: matrix of training set. Each row of train_data contains
        feature vector of a image
      train_label: vector of label corresponding to each image in the training
        set
-     validation_data: matrix of training set. Each row of validation_data 
+     validation_data: matrix of training set. Each row of validation_data
        contains feature vector of a image
-     validation_label: vector of label corresponding to each image in the 
+     validation_label: vector of label corresponding to each image in the
        training set
-     test_data: matrix of training set. Each row of test_data contains 
+     test_data: matrix of training set. Each row of test_data contains
        feature vector of a image
      test_label: vector of label corresponding to each image in the testing
        set
-
      Things to do for preprocessing step:
      - remove features that have the same value for all data points
            with corresponding labels
@@ -64,7 +59,7 @@ def preprocess():
                                  mat['train4'], mat['train5'],
                                  mat['train6'], mat['train7'],
                                  mat['train8'], mat['train9']), 0)
-    train_label = np.concatenate((np.ones((mat['train0'].shape[0], 1), dtype='uint8'),
+    train_label = np.concatenate((1*np.ones((mat['train0'].shape[0], 1), dtype='uint8'),
                                   2 * np.ones((mat['train1'].shape[0], 1), dtype='uint8'),
                                   3 * np.ones((mat['train2'].shape[0], 1), dtype='uint8'),
                                   4 * np.ones((mat['train3'].shape[0], 1), dtype='uint8'),
@@ -74,7 +69,7 @@ def preprocess():
                                   8 * np.ones((mat['train7'].shape[0], 1), dtype='uint8'),
                                   9 * np.ones((mat['train8'].shape[0], 1), dtype='uint8'),
                                   10 * np.ones((mat['train9'].shape[0], 1), dtype='uint8')), 0)
-    test_label = np.concatenate((np.ones((mat['test0'].shape[0], 1), dtype='uint8'),
+    test_label = np.concatenate((1* np.ones((mat['test0'].shape[0], 1), dtype='uint8'),
                                  2 * np.ones((mat['test1'].shape[0], 1), dtype='uint8'),
                                  3 * np.ones((mat['test2'].shape[0], 1), dtype='uint8'),
                                  4 * np.ones((mat['test3'].shape[0], 1), dtype='uint8'),
@@ -91,55 +86,39 @@ def preprocess():
                                 mat['test8'], mat['test9']), 0)
 
 
+
+
+
     # remove features that have same value for all points in the training data
-    #train_data = np.unique(train_data, axis=0)
+    to_remove = np.all(train_data == train_data[0, :], axis=0)
+    train_data = train_data[:, ~to_remove]
+    test_data = test_data[:, ~to_remove]
 
-    col_to_remove = np.all(train_data == train_data[0, :], axis=0)
-    index_to_remove = []
 
-    for index in range(len(col_to_remove)):
-        if col_to_remove[index] == True:
-            index_to_remove.append(index)
-
-    train_data = np.delete(train_data, index_to_remove, axis=1)
 
     # convert data to double
     train_data = train_data.astype(float)
+    test_data = test_data.astype(float)
+    train_label = train_label.astype(int)
 
     # normalize data to [0,1]
     train_data = train_data / 255
+    test_data = test_data / 255
 
 
     # Split train_data and train_label into train_data, validation_data and train_label, validation_label
     # replace the next two lines
 
     #creating a list of 10,000 indexes to remove from training data, and insert into validation data and validation label
-    to_validation= []
-    while len(to_validation) < 10000:
-        random = randint(0, 59999)
-
-        if random not in to_validation:
-            to_validation.append(random)
-
-
-    validation_data = np.array([])
-    temp_data = []
-    for index in to_validation:
-        temp_data.append(train_data[index])
-
-    validation_data = np.array(temp_data)
-
-
-    validation_label = np.array([])
-    temp_label = []
-    for index in to_validation:
-        temp_label.append(train_label[index])
-
-    validation_label = np.array(temp_label)
+    to_validation = random.sample(range(0, 60000), 10000)
+    validation_data = train_data[to_validation]
+    validation_label = train_label[to_validation]
 
 
     #removing validation images from training data
     train_data = np.delete(train_data, to_validation, axis=0)
+    train_label = np.delete(train_label, to_validation, axis=0)
+
 
     print("preprocess done!")
 
@@ -147,11 +126,10 @@ def preprocess():
 
 
 def nnObjFunction(params, *args):
-    """% nnObjFunction computes the value of objective function (negative log 
-    %   likelihood error function with regularization) given the parameters 
-    %   of Neural Networks, thetraining data, their corresponding training 
+    """% nnObjFunction computes the value of objective function (negative log
+    %   likelihood error function with regularization) given the parameters
+    %   of Neural Networks, thetraining data, their corresponding training
     %   labels and lambda - regularization hyper-parameter.
-
     % Input:
     % params: vector of weights of 2 matrices w1 (weights of connections from
     %     input layer to hidden layer) and w2 (weights of connections from
@@ -167,21 +145,19 @@ def nnObjFunction(params, *args):
     %     in the vector represents the truth label of its corresponding image.
     % lambda: regularization hyper-parameter. This value is used for fixing the
     %     overfitting problem.
-       
-    % Output: 
+    % Output:
     % obj_val: a scalar value representing value of error function
     % obj_grad: a SINGLE vector of gradient value of error function
     % NOTE: how to compute obj_grad
     % Use backpropagation algorithm to compute the gradient of error function
     % for each weights in weight matrices.
-
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % reshape 'params' vector into 2 matrices of weight w1 and w2
     % w1: matrix of weights of connections from input layer to hidden layers.
-    %     w1(i, j) represents the weight of connection from unit j in input 
+    %     w1(i, j) represents the weight of connection from unit j in input
     %     layer to unit i in hidden layer.
     % w2: matrix of weights of connections from hidden layer to output layers.
-    %     w2(i, j) represents the weight of connection from unit j in hidden 
+    %     w2(i, j) represents the weight of connection from unit j in hidden
     %     layer to unit i in output layer."""
 
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
@@ -190,19 +166,47 @@ def nnObjFunction(params, *args):
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
     obj_val = 0
 
-    # Your code here
-    #
-    #
-    #
-    #
-    #
+
+    #Forward propogation
+    #adding biases to input data with the size of training_data columns
+    training_data = np.column_stack((training_data,np.ones(training_data.shape[0])))
+    #Multiplying and making the function non linear
+    zj_hidden1  = sigmoid(np.dot(training_data, w1.T))
+
+    #adding bias to hidden layer1 with the size of zj_hidden1 columns
+    zj_hidden1 = np.column_stack((zj_hidden1,np.ones(zj_hidden1.shape[0])))
+    #Multiplying and making the function non linear
+    outputs = sigmoid(np.dot(zj_hidden1, w2.T))
+
+
+    #1 to k encoding
+    new_training_label = np.zeros((len(training_data), 10))
+
+    for i in range(len(new_training_label)):
+
+        new_training_label[i][train_label[i][0] - 1] = 1
 
 
 
     # Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     # you would use code similar to the one below to create a flat array
     # obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
+    # Back propogation
+
+
+    g2 = np.dot((outputs - new_training_label).T, zj_hidden1)
+    g1 = np.dot(((1 - zj_hidden1) * zj_hidden1* (np.dot(outputs - new_training_label, w2))).T, training_data)
+    g1 = np.delete(g1, n_hidden,axis=0)
+
+
     obj_grad = np.array([])
+    obj_grad = np.concatenate((g1.flatten(), g2.flatten()), 0)
+    obj_grad = obj_grad / len(training_data)
+
+    obj_val_part1 = np.sum(-1 * (new_training_label * np.log(outputs) + (1 - new_training_label) * np.log(1 - outputs)))
+    obj_val_part1 = obj_val_part1 / len(training_data)
+    obj_val_part2 = (lambdaval / (2 * len(training_data)) * (np.sum(np.square(w1)) + np.sum(np.square(w2))))
+    obj_val = obj_val_part1 + obj_val_part2
 
     return (obj_val, obj_grad)
 
@@ -210,22 +214,31 @@ def nnObjFunction(params, *args):
 def nnPredict(w1, w2, data):
     """% nnPredict predicts the label of data given the parameter w1, w2 of Neural
     % Network.
-
     % Input:
     % w1: matrix of weights of connections from input layer to hidden layers.
-    %     w1(i, j) represents the weight of connection from unit i in input 
+    %     w1(i, j) represents the weight of connection from unit i in input
     %     layer to unit j in hidden layer.
     % w2: matrix of weights of connections from hidden layer to output layers.
-    %     w2(i, j) represents the weight of connection from unit i in input 
+    %     w2(i, j) represents the weight of connection from unit i in input
     %     layer to unit j in hidden layer.
-    % data: matrix of data. Each row of this matrix represents the feature 
+    % data: matrix of data. Each row of this matrix represents the feature
     %       vector of a particular image
-       
-    % Output: 
+    % Output:
     % label: a column vector of predicted labels"""
 
-    labels = np.array([])
-    # Your code here
+    # Add bias
+    data = np.column_stack((data, np.ones(data.shape[0])))
+    zj_array_n = sigmoid(np.dot(data, w1.T))
+    # Add bias
+    zj_array_n = np.column_stack((zj_array_n, np.ones(zj_array_n.shape[0])))
+    # Feed to output
+    ol_array_n = sigmoid(np.dot(zj_array_n, w2.T))
+
+    # Return indices of max as labels
+    labels = np.argmax(ol_array_n, axis=1) + 1
+
+
+    labels = labels.reshape(-1, 1)
 
     return labels
 
@@ -233,7 +246,7 @@ def nnPredict(w1, w2, data):
 
 
 """**************Neural Network Script Starts here********************************"""
-
+begin_time =time.time()
 train_data, train_label, validation_data, validation_label, test_data, test_label = preprocess()
 
 #  Train Neural Network
@@ -242,7 +255,7 @@ train_data, train_label, validation_data, validation_label, test_data, test_labe
 n_input = train_data.shape[1]
 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 50
+n_hidden =80
 
 # set the number of nodes in output unit
 n_class = 10
@@ -255,7 +268,7 @@ initial_w2 = initializeWeights(n_hidden, n_class)
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()), 0)
 
 # set the regularization hyper-parameter
-lambdaval = 0
+lambdaval = 0.1
 
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
@@ -278,9 +291,11 @@ w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 
 predicted_label = nnPredict(w1, w2, train_data)
 
+
 # find the accuracy on Training Dataset
 
 print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label).astype(float))) + '%')
+
 
 predicted_label = nnPredict(w1, w2, validation_data)
 
@@ -288,8 +303,16 @@ predicted_label = nnPredict(w1, w2, validation_data)
 
 print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label).astype(float))) + '%')
 
+
 predicted_label = nnPredict(w1, w2, test_data)
 
 # find the accuracy on Validation Dataset
 
 print('\n Test set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
+
+end_time = time.time()
+complete = end_time - begin_time
+min = int(complete/60)
+secs = round(complete % 60, 2)
+
+print("Your program is finished with %d minutes %d seconds!" % (min, secs))
