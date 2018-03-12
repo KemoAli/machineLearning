@@ -96,10 +96,6 @@ def preprocess():
         train_data = np.delete(train_data, to_validation, axis=0)
         train_label = np.delete(train_label, to_validation, axis=0)
 
-        print(len(validation_label))
-        print(len(train_data))
-
-
 
 
 
@@ -153,19 +149,10 @@ def nnObjFunction(params, *args):
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
     obj_val = 0
 
-    # Your code here
-    #
-    #
-    #
-    #
-    #
-
-
 
     # Forward propogation
     # adding biases to input data with the size of training_data columns
     training_data = np.column_stack((training_data, np.ones(training_data.shape[0])))
-
     # Multiplying and making the function non linear
     zj_hidden1 = sigmoid(np.dot(training_data, w1.T))
 
@@ -177,36 +164,30 @@ def nnObjFunction(params, *args):
     # 1 to k encoding
     new_training_label = np.zeros((len(training_data), 10))
 
-
     for i in range(len(new_training_label)):
         new_training_label[i][train_label[i][0] - 1] = 1
 
     # Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     # you would use code similar to the one below to create a flat array
     # obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
-    # Back propogation
-    delta_l = outputs - new_training_label
 
-    grad_w2 = np.dot(delta_l.T, zj_hidden1)
-    grad_w1 = np.dot(((1 - zj_hidden1) * zj_hidden1 * (np.dot(delta_l, w2))).T, training_data)
+    rows = len(training_data)
 
-    # Remove zero row
-    grad_w1 = np.delete(grad_w1, n_hidden, 0)
+    g2 = (np.dot((outputs - new_training_label).T, zj_hidden1)).flatten()
+    g1 = np.dot(((1 - zj_hidden1) * zj_hidden1 * (np.dot(outputs - new_training_label, w2))).T, training_data)
+    g1 = (np.delete(g1, n_hidden, axis=0)).flatten()
+    obj_grad = (np.concatenate((g1, g2), axis=0)) / rows
 
-    num_samples = training_data.shape[0]
+    sumA = new_training_label * np.log(outputs)
+    sumB = (1 - new_training_label) * np.log(1 - outputs)
+    sum = np.sum(-1 * (sumA + sumB))
 
-    # obj_grad
-    obj_grad = np.array([])
-    obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()), 0)
-    obj_grad = obj_grad / num_samples
+    w1_sum = np.sum(w1 ** 2)
+    w2_sum = np.sum(w2 ** 2)
 
-    # obj_val
-    obj_val_part1 = np.sum(-1 * (new_training_label * np.log(outputs) + (1 - new_training_label) * np.log(1 - outputs)))
-    obj_val_part1 = obj_val_part1 / num_samples
-    obj_val_part2 = (lambdaval / (2 * num_samples)) * (np.sum(np.square(w1)) + np.sum(np.square(w2)))
-    obj_val = obj_val_part1 + obj_val_part2
+    obj_val = (sum / rows) + (lambdaval / (2 * rows) * (w1_sum + w2_sum))
 
-    return (obj_val, obj_grad)
+    return obj_val, obj_grad
 
 
 def nnPredict(w1, w2, data):
@@ -226,20 +207,17 @@ def nnPredict(w1, w2, data):
     % Output:
     % label: a column vector of predicted labels"""
 
-    # Add bias
-    data = np.column_stack((data, np.ones(data.shape[0])))
-    zj_array_n = sigmoid(np.dot(data, w1.T))
-    # Add bias
-    zj_array_n = np.column_stack((zj_array_n, np.ones(zj_array_n.shape[0])))
-    # Feed to output
-    ol_array_n = sigmoid(np.dot(zj_array_n, w2.T))
+    rows = len(data)
 
-    # Return indices of max as labels
-    labels = np.argmax(ol_array_n, axis=1) + 1
+    data = np.column_stack((data, np.ones(rows)))
 
+    zj = sigmoid(np.dot(data, w1.T))
 
-    labels = labels.reshape(-1, 1)
+    zj = np.column_stack((zj, np.ones(rows)))
 
+    output = sigmoid(np.dot(zj, w2.T))
+
+    return (np.argmax(output, axis=1) + 1).reshape(-1, 1)
     return labels
 
 
@@ -290,9 +268,6 @@ w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 predicted_label = nnPredict(w1, w2, train_data)
 
 # find the accuracy on Training Dataset
-
-for i in range(len(train_label)):
-    print("predicted: " + str(predicted_label[i][0]) + " actual: " + str(train_label[i][0]))
 
 print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label).astype(float))) + '%')
 

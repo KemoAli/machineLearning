@@ -192,29 +192,28 @@ def nnObjFunction(params, *args):
 
         new_training_label[i][train_label[i][0] - 1] = 1
 
-
-
     # Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     # you would use code similar to the one below to create a flat array
     # obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
-    # Back propogation
 
+    rows = len(training_data)
 
-    g2 = np.dot((outputs - new_training_label).T, zj_hidden1)
-    g1 = np.dot(((1 - zj_hidden1) * zj_hidden1* (np.dot(outputs - new_training_label, w2))).T, training_data)
-    g1 = np.delete(g1, n_hidden,axis=0)
+    g2 = (np.dot((outputs - new_training_label).T, zj_hidden1)).flatten()
+    g1 = np.dot(((1 - zj_hidden1) * zj_hidden1 * (np.dot(outputs - new_training_label, w2))).T, training_data)
+    g1 = (np.delete(g1,n_hidden,axis=0)).flatten()
+    obj_grad = (np.concatenate((g1, g2), axis=0)) / rows
 
+    sumA = new_training_label * np.log(outputs)
+    sumB = (1 - new_training_label) * np.log(1 - outputs)
+    sum = np.sum(-1 * (sumA + sumB))
 
-    obj_grad = np.array([])
-    obj_grad = np.concatenate((g1.flatten(), g2.flatten()), 0)
-    obj_grad = obj_grad / len(training_data)
+    w1_sum = np.sum(w1**2)
+    w2_sum = np.sum(w2**2)
 
-    obj_val_part1 = np.sum(-1 * (new_training_label * np.log(outputs) + (1 - new_training_label) * np.log(1 - outputs)))
-    obj_val_part1 = obj_val_part1 / len(training_data)
-    obj_val_part2 = (lambdaval / (2 * len(training_data)) * (np.sum(np.square(w1)) + np.sum(np.square(w2))))
-    obj_val = obj_val_part1 + obj_val_part2
+    obj_val = (sum / rows) + (lambdaval / (2 * rows) * (w1_sum + w2_sum))
 
-    return (obj_val, obj_grad)
+    return obj_val, obj_grad
+
 
 
 def nnPredict(w1, w2, data):
@@ -234,21 +233,17 @@ def nnPredict(w1, w2, data):
     % Output:
     % label: a column vector of predicted labels"""
 
-    # Add bias
-    data = np.column_stack((data, np.ones(data.shape[0])))
-    zj_array_n = sigmoid(np.dot(data, w1.T))
-    # Add bias
-    zj_array_n = np.column_stack((zj_array_n, np.ones(zj_array_n.shape[0])))
-    # Feed to output
-    ol_array_n = sigmoid(np.dot(zj_array_n, w2.T))
+    rows = len(data)
 
-    # Return indices of max as labels
-    labels = np.argmax(ol_array_n, axis=1) + 1
+    data = np.column_stack((data, np.ones(rows)))
 
+    zj = sigmoid(np.dot(data, w1.T))
 
-    labels = labels.reshape(-1, 1)
+    zj = np.column_stack((zj, np.ones(rows)))
 
-    return labels
+    output = sigmoid(np.dot(zj, w2.T))
+
+    return (np.argmax(output, axis=1) + 1).reshape(-1, 1)
 
 
 
