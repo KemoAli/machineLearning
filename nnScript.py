@@ -62,26 +62,26 @@ def preprocess():
                                  mat['train4'], mat['train5'],
                                  mat['train6'], mat['train7'],
                                  mat['train8'], mat['train9']), 0)
-    train_label = np.concatenate((0*np.ones((mat['train0'].shape[0], 1), dtype='uint8'),
-                                  1 * np.ones((mat['train1'].shape[0], 1), dtype='uint8'),
-                                  2 * np.ones((mat['train2'].shape[0], 1), dtype='uint8'),
-                                  3 * np.ones((mat['train3'].shape[0], 1), dtype='uint8'),
-                                  4 * np.ones((mat['train4'].shape[0], 1), dtype='uint8'),
-                                  5 * np.ones((mat['train5'].shape[0], 1), dtype='uint8'),
-                                  6 * np.ones((mat['train6'].shape[0], 1), dtype='uint8'),
-                                  7 * np.ones((mat['train7'].shape[0], 1), dtype='uint8'),
-                                  8 * np.ones((mat['train8'].shape[0], 1), dtype='uint8'),
-                                  9 * np.ones((mat['train9'].shape[0], 1), dtype='uint8')), 0)
-    test_label = np.concatenate((0* np.ones((mat['test0'].shape[0], 1), dtype='uint8'),
-                                 1 * np.ones((mat['test1'].shape[0], 1), dtype='uint8'),
-                                 2 * np.ones((mat['test2'].shape[0], 1), dtype='uint8'),
-                                 3 * np.ones((mat['test3'].shape[0], 1), dtype='uint8'),
-                                 4 * np.ones((mat['test4'].shape[0], 1), dtype='uint8'),
-                                 5 * np.ones((mat['test5'].shape[0], 1), dtype='uint8'),
-                                 6 * np.ones((mat['test6'].shape[0], 1), dtype='uint8'),
-                                 7 * np.ones((mat['test7'].shape[0], 1), dtype='uint8'),
-                                 8 * np.ones((mat['test8'].shape[0], 1), dtype='uint8'),
-                                 9 * np.ones((mat['test9'].shape[0], 1), dtype='uint8')), 0)
+    train_label = np.concatenate((1*np.ones((mat['train0'].shape[0], 1), dtype='uint8'),
+                                  2 * np.ones((mat['train1'].shape[0], 1), dtype='uint8'),
+                                  3 * np.ones((mat['train2'].shape[0], 1), dtype='uint8'),
+                                  4 * np.ones((mat['train3'].shape[0], 1), dtype='uint8'),
+                                  5 * np.ones((mat['train4'].shape[0], 1), dtype='uint8'),
+                                  6 * np.ones((mat['train5'].shape[0], 1), dtype='uint8'),
+                                  7 * np.ones((mat['train6'].shape[0], 1), dtype='uint8'),
+                                  8 * np.ones((mat['train7'].shape[0], 1), dtype='uint8'),
+                                  9 * np.ones((mat['train8'].shape[0], 1), dtype='uint8'),
+                                  10 * np.ones((mat['train9'].shape[0], 1), dtype='uint8')), 0)
+    test_label = np.concatenate((1* np.ones((mat['test0'].shape[0], 1), dtype='uint8'),
+                                 2 * np.ones((mat['test1'].shape[0], 1), dtype='uint8'),
+                                 3 * np.ones((mat['test2'].shape[0], 1), dtype='uint8'),
+                                 4 * np.ones((mat['test3'].shape[0], 1), dtype='uint8'),
+                                 5 * np.ones((mat['test4'].shape[0], 1), dtype='uint8'),
+                                 6 * np.ones((mat['test5'].shape[0], 1), dtype='uint8'),
+                                 7 * np.ones((mat['test6'].shape[0], 1), dtype='uint8'),
+                                 8 * np.ones((mat['test7'].shape[0], 1), dtype='uint8'),
+                                 9 * np.ones((mat['test8'].shape[0], 1), dtype='uint8'),
+                                 10 * np.ones((mat['test9'].shape[0], 1), dtype='uint8')), 0)
     test_data = np.concatenate((mat['test0'], mat['test1'],
                                 mat['test2'], mat['test3'],
                                 mat['test4'], mat['test5'],
@@ -102,6 +102,7 @@ def preprocess():
     # convert data to double
     train_data = train_data.astype(float)
     test_data = test_data.astype(float)
+    train_label = train_label.astype(int)
 
     # normalize data to [0,1]
     train_data = train_data / 255
@@ -120,8 +121,6 @@ def preprocess():
     #removing validation images from training data
     train_data = np.delete(train_data, to_validation, axis=0)
     train_label = np.delete(train_label, to_validation, axis=0)
-
-
 
 
     print("preprocess done!")
@@ -173,12 +172,6 @@ def nnObjFunction(params, *args):
     w2 = params[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
     obj_val = 0
 
-    # Your code here
-    #
-    #
-    #
-    #
-    #
 
     #Forward propogation
     #adding biases to input data with the size of training_data columns
@@ -195,8 +188,6 @@ def nnObjFunction(params, *args):
     #1 to k encoding
     new_training_label = np.zeros((len(training_data), 10))
 
-
-
     for i in range(len(new_training_label)):
 
         new_training_label[i][train_label[i][0] - 1] = 1
@@ -207,27 +198,21 @@ def nnObjFunction(params, *args):
     # you would use code similar to the one below to create a flat array
     # obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
     # Back propogation
-    delta_l = outputs - new_training_label
 
-    grad_w2 = np.dot(delta_l.T, zj_hidden1)
-    grad_w1 = np.dot(((1 - zj_hidden1) * zj_hidden1* (np.dot(delta_l, w2))).T, training_data)
 
-    # Remove zero row
-    grad_w1 = np.delete(grad_w1, n_hidden, 0)
+    g2 = np.dot((outputs - new_training_label).T, zj_hidden1)
+    g1 = np.dot(((1 - zj_hidden1) * zj_hidden1* (np.dot(outputs - new_training_label, w2))).T, training_data)
+    g1 = np.delete(g1, n_hidden,axis=0)
 
-    num_samples = training_data.shape[0]
 
-    # obj_grad
     obj_grad = np.array([])
-    obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()), 0)
-    obj_grad = obj_grad / num_samples
+    obj_grad = np.concatenate((g1.flatten(), g2.flatten()), 0)
+    obj_grad = obj_grad / len(training_data)
 
-    # obj_val
     obj_val_part1 = np.sum(-1 * (new_training_label * np.log(outputs) + (1 - new_training_label) * np.log(1 - outputs)))
-    obj_val_part1 = obj_val_part1 / num_samples
-    obj_val_part2 = (lambdaval / (2 * num_samples)) * (np.sum(np.square(w1)) + np.sum(np.square(w2)))
+    obj_val_part1 = obj_val_part1 / len(training_data)
+    obj_val_part2 = (lambdaval / (2 * len(training_data)) * (np.sum(np.square(w1)) + np.sum(np.square(w2))))
     obj_val = obj_val_part1 + obj_val_part2
-
 
     return (obj_val, obj_grad)
 
@@ -278,7 +263,7 @@ train_data, train_label, validation_data, validation_label, test_data, test_labe
 n_input = train_data.shape[1]
 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 90
+n_hidden = 85
 
 # set the number of nodes in output unit
 n_class = 10
@@ -291,7 +276,7 @@ initial_w2 = initializeWeights(n_hidden, n_class)
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()), 0)
 
 # set the regularization hyper-parameter
-lambdaval = 0.6
+lambdaval = 0.1
 
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 

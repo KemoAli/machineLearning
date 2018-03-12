@@ -1,4 +1,6 @@
 import numpy as np
+import pickle
+import random
 from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
@@ -12,8 +14,8 @@ def initializeWeights(n_in, n_out):
     # Input:
     # n_in: number of nodes of the input layer
     # n_out: number of nodes of the output layer
-       
-    # Output: 
+
+    # Output:
     # W: matrix of random initial weights with size (n_out x (n_in + 1))"""
 
     epsilon = sqrt(6) / sqrt(n_in + n_out + 1)
@@ -25,7 +27,7 @@ def sigmoid(z):
     """# Notice that z can be a scalar, a vector or a matrix
     # return the sigmoid of input z"""
 
-    return  # your code here
+    return 1 / (1 + np.exp(-z))
 
 
 def preprocess():
@@ -34,15 +36,15 @@ def preprocess():
      the MNIST data set from file 'mnist_all.mat'.
 
      Output:
-     train_data: matrix of training set. Each row of train_data contains 
+     train_data: matrix of training set. Each row of train_data contains
        feature vector of a image
      train_label: vector of label corresponding to each image in the training
        set
-     validation_data: matrix of training set. Each row of validation_data 
+     validation_data: matrix of training set. Each row of validation_data
        contains feature vector of a image
-     validation_label: vector of label corresponding to each image in the 
+     validation_label: vector of label corresponding to each image in the
        training set
-     test_data: matrix of training set. Each row of test_data contains 
+     test_data: matrix of training set. Each row of test_data contains
        feature vector of a image
      test_label: vector of label corresponding to each image in the testing
        set
@@ -54,7 +56,7 @@ def preprocess():
            function
      - normalize the data to [0, 1]
      - divide the original data set to training, validation and testing set"""
-    
+
     # Preparing the data set
     with open('AI_quick_draw.pickle', 'rb') as open_ai_quick:
         train_data = pickle.load(open_ai_quick)
@@ -62,26 +64,55 @@ def preprocess():
         test_data = pickle.load(open_ai_quick)
         test_label = pickle.load(open_ai_quick)
 
-    
     # remove features that have same value for all points in the training data
     # convert data to double
     # normalize data to [0,1]
-    
-    # Split train_data and train_label into train_data, validation_data and train_label, validation_label
-    # replace the next two lines
-    validation_data = np.array([])
-    validation_label = np.array([])
 
 
-    print "preprocess done!"
+        # remove features that have same value for all points in the training data
+        to_remove = np.all(train_data == train_data[0, :], axis=0)
+        train_data = train_data[:, ~to_remove]
+        test_data = test_data[:, ~to_remove]
+
+        # convert data to double
+        train_data = train_data.astype(float)
+        test_data = test_data.astype(float)
+        train_label = train_label.astype(int)
+
+        # normalize data to [0,1]
+        train_data = train_data / 255
+        test_data = test_data / 255
+
+
+        # Split train_data and train_label into train_data, validation_data and train_label, validation_label
+        # replace the next two lines
+
+        # creating a list of 10,000 indexes to remove from training data, and insert into validation data and validation label
+        to_validation = random.sample(range(0, 100000), 15000)
+        validation_data = train_data[to_validation]
+        validation_label = train_label[to_validation]
+
+        # removing validation images from training data
+        train_data = np.delete(train_data, to_validation, axis=0)
+        train_label = np.delete(train_label, to_validation, axis=0)
+
+        print(len(validation_label))
+        print(len(train_data))
+
+
+
+
+
+
+    print("preprocess done!")
 
     return train_data, train_label, validation_data, validation_label, test_data, test_label
 
 
 def nnObjFunction(params, *args):
-    """% nnObjFunction computes the value of objective function (negative log 
-    %   likelihood error function with regularization) given the parameters 
-    %   of Neural Networks, thetraining data, their corresponding training 
+    """% nnObjFunction computes the value of objective function (negative log
+    %   likelihood error function with regularization) given the parameters
+    %   of Neural Networks, thetraining data, their corresponding training
     %   labels and lambda - regularization hyper-parameter.
 
     % Input:
@@ -99,8 +130,8 @@ def nnObjFunction(params, *args):
     %     in the vector represents the truth label of its corresponding image.
     % lambda: regularization hyper-parameter. This value is used for fixing the
     %     overfitting problem.
-       
-    % Output: 
+
+    % Output:
     % obj_val: a scalar value representing value of error function
     % obj_grad: a SINGLE vector of gradient value of error function
     % NOTE: how to compute obj_grad
@@ -110,10 +141,10 @@ def nnObjFunction(params, *args):
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % reshape 'params' vector into 2 matrices of weight w1 and w2
     % w1: matrix of weights of connections from input layer to hidden layers.
-    %     w1(i, j) represents the weight of connection from unit j in input 
+    %     w1(i, j) represents the weight of connection from unit j in input
     %     layer to unit i in hidden layer.
     % w2: matrix of weights of connections from hidden layer to output layers.
-    %     w2(i, j) represents the weight of connection from unit j in hidden 
+    %     w2(i, j) represents the weight of connection from unit j in hidden
     %     layer to unit i in output layer."""
 
     n_input, n_hidden, n_class, training_data, training_label, lambdaval = args
@@ -131,10 +162,49 @@ def nnObjFunction(params, *args):
 
 
 
+    # Forward propogation
+    # adding biases to input data with the size of training_data columns
+    training_data = np.column_stack((training_data, np.ones(training_data.shape[0])))
+
+    # Multiplying and making the function non linear
+    zj_hidden1 = sigmoid(np.dot(training_data, w1.T))
+
+    # adding bias to hidden layer1 with the size of zj_hidden1 columns
+    zj_hidden1 = np.column_stack((zj_hidden1, np.ones(zj_hidden1.shape[0])))
+    # Multiplying and making the function non linear
+    outputs = sigmoid(np.dot(zj_hidden1, w2.T))
+
+    # 1 to k encoding
+    new_training_label = np.zeros((len(training_data), 10))
+
+
+    for i in range(len(new_training_label)):
+        new_training_label[i][train_label[i][0] - 1] = 1
+
     # Make sure you reshape the gradient matrices to a 1D array. for instance if your gradient matrices are grad_w1 and grad_w2
     # you would use code similar to the one below to create a flat array
     # obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()),0)
+    # Back propogation
+    delta_l = outputs - new_training_label
+
+    grad_w2 = np.dot(delta_l.T, zj_hidden1)
+    grad_w1 = np.dot(((1 - zj_hidden1) * zj_hidden1 * (np.dot(delta_l, w2))).T, training_data)
+
+    # Remove zero row
+    grad_w1 = np.delete(grad_w1, n_hidden, 0)
+
+    num_samples = training_data.shape[0]
+
+    # obj_grad
     obj_grad = np.array([])
+    obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()), 0)
+    obj_grad = obj_grad / num_samples
+
+    # obj_val
+    obj_val_part1 = np.sum(-1 * (new_training_label * np.log(outputs) + (1 - new_training_label) * np.log(1 - outputs)))
+    obj_val_part1 = obj_val_part1 / num_samples
+    obj_val_part2 = (lambdaval / (2 * num_samples)) * (np.sum(np.square(w1)) + np.sum(np.square(w2)))
+    obj_val = obj_val_part1 + obj_val_part2
 
     return (obj_val, obj_grad)
 
@@ -145,19 +215,30 @@ def nnPredict(w1, w2, data):
 
     % Input:
     % w1: matrix of weights of connections from input layer to hidden layers.
-    %     w1(i, j) represents the weight of connection from unit i in input 
+    %     w1(i, j) represents the weight of connection from unit i in input
     %     layer to unit j in hidden layer.
     % w2: matrix of weights of connections from hidden layer to output layers.
-    %     w2(i, j) represents the weight of connection from unit i in input 
+    %     w2(i, j) represents the weight of connection from unit i in input
     %     layer to unit j in hidden layer.
-    % data: matrix of data. Each row of this matrix represents the feature 
+    % data: matrix of data. Each row of this matrix represents the feature
     %       vector of a particular image
-       
-    % Output: 
+
+    % Output:
     % label: a column vector of predicted labels"""
 
-    labels = np.array([])
-    # Your code here
+    # Add bias
+    data = np.column_stack((data, np.ones(data.shape[0])))
+    zj_array_n = sigmoid(np.dot(data, w1.T))
+    # Add bias
+    zj_array_n = np.column_stack((zj_array_n, np.ones(zj_array_n.shape[0])))
+    # Feed to output
+    ol_array_n = sigmoid(np.dot(zj_array_n, w2.T))
+
+    # Return indices of max as labels
+    labels = np.argmax(ol_array_n, axis=1) + 1
+
+
+    labels = labels.reshape(-1, 1)
 
     return labels
 
@@ -172,7 +253,7 @@ train_data, train_label, validation_data, validation_label, test_data, test_labe
 n_input = train_data.shape[1]
 
 # set the number of nodes in hidden unit (not including bias unit)
-n_hidden = 50
+n_hidden = 30
 
 # set the number of nodes in output unit
 n_class = 10
@@ -185,7 +266,7 @@ initial_w2 = initializeWeights(n_hidden, n_class)
 initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()), 0)
 
 # set the regularization hyper-parameter
-lambdaval = 0
+lambdaval = 0.1
 
 args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
@@ -209,6 +290,9 @@ w2 = nn_params.x[(n_hidden * (n_input + 1)):].reshape((n_class, (n_hidden + 1)))
 predicted_label = nnPredict(w1, w2, train_data)
 
 # find the accuracy on Training Dataset
+
+for i in range(len(train_label)):
+    print("predicted: " + str(predicted_label[i][0]) + " actual: " + str(train_label[i][0]))
 
 print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label).astype(float))) + '%')
 
